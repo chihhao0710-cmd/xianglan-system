@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>香蘭鞋材管理系統 V4.10 按鈕修正版</title>
+  <title>香蘭鞋材管理系統 V4.13 分批請款版</title>
   <style>
     :root{--bg:#f5f6f8;--card:#fff;--text:#1f2937;--muted:#6b7280;--line:#d1d5db;--primary:#2563eb;--danger:#dc2626}
     *{box-sizing:border-box}
@@ -35,6 +35,11 @@
     .company .cn{font-size:22px;font-weight:bold}.company .vn{font-size:18px;font-weight:bold}
     .signature{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:30px}
     .sig-box{text-align:center;height:80px}
+    .notice{padding:10px 12px;border-radius:8px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;margin-top:10px;line-height:1.55}
+    .notice.warn{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
+    .status{display:inline-block;padding:2px 8px;border-radius:999px;background:#e5e7eb;font-size:12px;white-space:nowrap}
+    .status.partial{background:#fef3c7;color:#92400e}.status.done{background:#dcfce7;color:#166534}
+    .table-wrap{overflow-x:auto}
     @media (max-width:700px){.grid,.grid3{grid-template-columns:1fr}main{padding:10px}table{font-size:12px}th,td{padding:6px}}
     @media print{ @page{size:A4 portrait;margin:10mm;}
       body{background:white}header,nav,.no-print,.card:not(.print-card){display:none!important}
@@ -46,8 +51,8 @@
 </head>
 <body>
 <header>
-  <h1>香蘭鞋材管理系統 V4.10 按鈕修正版</h1>
-  <p>客戶資料｜加工項目主檔｜報價單｜請款單｜加工方式下拉選擇｜A4列印</p>
+  <h1>香蘭鞋材管理系統 V4.13 分批請款版</h1>
+  <p>客戶資料｜加工項目主檔｜報價單｜分批請款｜剩餘數量控管｜A4列印</p>
 </header>
 
 <nav>
@@ -125,18 +130,20 @@
     <div class="grid3">
       <div><label>加工方式 / Phương thức gia công</label><select id="quoteMethod" onchange="applyQuoteMethod()"></select></div>
       <div><label>加工項目 / Công đoạn</label><select id="quoteItem"></select></div>
-      <div><label>數量（雙） / Số lượng (Đôi)</label><input id="quoteQty" type="number" step="0.01"></div>
+      <div><label>報價數量（內部請款控管，不列印）</label><input id="quoteQty" type="number" min="0.01" step="0.01"></div>
     </div>
     <div class="grid">
-      <div><label>單價 / Đơn giá</label><input id="quotePrice" type="number" step="0.01"></div>
+      <div><label>單價 / Đơn giá</label><input id="quotePrice" type="number" min="0" step="0.01"></div>
       <div><label>代工項目備註 / Ghi chú công đoạn</label><input id="quoteLineNote" placeholder="可留空"></div>
     </div>
     <div><label>備註 / Ghi chú</label><textarea id="quoteNote"></textarea></div>
     <button class="btn" onclick="addQuoteLine()">加入明細 / Thêm chi tiết</button>
     <button class="btn secondary" onclick="saveQuote()">儲存報價單 / Lưu báo giá</button>
+    <button class="btn light" onclick="newQuote()">建立新報價 / Báo giá mới</button>
     <button class="btn light" onclick="clearQuoteLines()">清空明細 / Xóa chi tiết</button>
     <button class="btn light" onclick="window.print()">列印 / 存成 PDF</button>
   </div>
+  <div class="card no-print"><h3>報價明細編輯</h3><div id="quoteLineEditor"></div></div>
   <div class="card print-card"><div id="quotePrint" class="print-area"></div></div>
 </section>
 
@@ -152,6 +159,7 @@
       <div><label>從報價單帶入 / Lấy dữ liệu từ báo giá</label><select id="invoiceQuoteSelect"></select></div>
       <div style="display:flex;align-items:end"><button class="btn light" type="button" onclick="loadQuoteToInvoice()">帶入報價單資料 / Lấy dữ liệu</button></div>
     </div>
+    <div id="invoiceQuoteSummary" class="notice">選擇報價單後，系統會帶入尚未請款的剩餘數量。</div>
     <div class="grid3">
       <div><label>加工單號 / Mã gia công</label><input id="invWorkNo" placeholder="例：GC-001"></div>
       <div><label>訂單編號 / Số đơn hàng</label><input id="invOrder" placeholder="例：CP01A0010-002"></div>
@@ -160,19 +168,26 @@
     <div class="grid3">
       <div><label>加工方式 / Phương thức gia công</label><select id="invMethod" onchange="applyInvoiceMethod()"></select></div>
       <div><label>請款內容 / Nội dung thanh toán</label><input id="invDesc"></div>
-      <div><label>數量（雙） / Số lượng (Đôi)</label><input id="invQty" type="number" step="0.01"></div>
+      <div><label>數量（雙） / Số lượng (Đôi)</label><input id="invQty" type="number" min="0.01" step="0.01"></div>
     </div>
     <div class="grid">
-      <div><label>單價 / Đơn giá</label><input id="invPrice" type="number" step="0.01"></div>
+      <div><label>單價 / Đơn giá</label><input id="invPrice" type="number" min="0" step="0.01"></div>
       <div><label>請款備註 / Ghi chú thanh toán</label><input id="invLineNote" placeholder="可留空"></div>
     </div>
     <div><label>備註 / Ghi chú</label><textarea id="invNote"></textarea></div>
     <button class="btn" onclick="addInvoiceLine()">加入明細 / Thêm chi tiết</button>
     <button class="btn secondary" onclick="saveInvoice()">儲存請款單 / Lưu phiếu thanh toán</button>
+    <button class="btn light" onclick="newInvoice()">建立新請款 / Phiếu mới</button>
     <button class="btn light" onclick="clearInvoiceLines()">清空明細 / Xóa chi tiết</button>
     <button class="btn light" onclick="window.print()">列印 / 存成 PDF</button>
   </div>
-  <div class="card print-card"><div id="invoicePrint" class="print-area"></div></div>
+  
+<div class="card no-print">
+<h3>請款明細編輯</h3>
+<div id="invoiceLineEditor"></div>
+</div>
+
+<div class="card print-card"><div id="invoicePrint" class="print-area"></div></div>
 </section>
 
 
@@ -193,6 +208,10 @@
     <h3>單價歷史 / Lịch sử đơn giá</h3>
     <div id="priceHistoryTable"></div>
   </div>
+  <div class="card">
+    <h3>請款紀錄與報價餘量 / Lịch sử thanh toán</h3>
+    <div id="invoiceHistoryTable"></div>
+  </div>
 </section>
 
 <section id="backup" class="section">
@@ -211,10 +230,29 @@
 
 <script>
 const storeKey='xianglan_web_v3_bilingual';
-let data=JSON.parse(localStorage.getItem(storeKey)||'{"customers":[],"items":[],"quotes":[],"invoices":[]}');
-let quoteLines=[], invoiceLines=[], editingItemId=null, editingCustomerId=null;
+const methodStoreKey='xianglan_processing_methods';
+const schemaVersion='4.13';
+const emptyData=()=>({schemaVersion,customers:[],items:[],quotes:[],invoices:[]});
+function uid(){return Date.now()*1000+Math.floor(Math.random()*1000)}
+function safeNumber(value, fallback=0){const n=Number(value);return Number.isFinite(n)?n:fallback}
+function cloneLines(lines){return (lines||[]).map(line=>({...line}))}
+function normalizeData(raw){
+  const source=raw&&typeof raw==='object'?raw:{};
+  const normalized=emptyData();
+  normalized.customers=Array.isArray(source.customers)?source.customers.filter(x=>x&&typeof x==='object'):[];
+  normalized.items=Array.isArray(source.items)?source.items.filter(x=>x&&typeof x==='object'):[];
+  normalized.quotes=(Array.isArray(source.quotes)?source.quotes:[]).filter(x=>x&&typeof x==='object').map(q=>({...q,lines:(Array.isArray(q.lines)?q.lines:[]).map(l=>({...l,id:l.id||uid(),qty:safeNumber(l.qty),price:safeNumber(l.price),amount:safeNumber(l.amount,safeNumber(l.qty)*safeNumber(l.price))}))}));
+  normalized.invoices=(Array.isArray(source.invoices)?source.invoices:[]).filter(x=>x&&typeof x==='object').map(inv=>({...inv,status:inv.status||'issued',lines:(Array.isArray(inv.lines)?inv.lines:[]).map(l=>({...l,qty:safeNumber(l.qty),price:safeNumber(l.price),amount:safeNumber(l.amount,safeNumber(l.qty)*safeNumber(l.price))}))}));
+  return normalized;
+}
+function loadData(){
+  try{return normalizeData(JSON.parse(localStorage.getItem(storeKey)||'{}'))}
+  catch(error){alert('本機資料格式損壞，系統已先載入空白資料。請使用備份檔復原。');return emptyData()}
+}
+let data=loadData();
+let quoteLines=[], invoiceLines=[], editingItemId=null, editingCustomerId=null, editingQuoteId=null, editingInvoiceId=null;
 const $=(id)=>document.getElementById(id);
-const processingMethods = [
+const defaultProcessingMethods = [
   {cn:"包跟", vn:"Bọc gót"},
   {cn:"中底包頭包邊", vn:"Bọc mũi và viền đế giữa"},
   {cn:"中底包邊", vn:"Bọc viền đế giữa"},
@@ -224,8 +262,11 @@ const processingMethods = [
   {cn:"包跟+組底+打天皮", vn:"Bọc gót + lắp đế + đóng nắp gót"}
 ];
 
+function escapeHtml(value){
+  return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+}
 function methodOptionsHtml(){
-  return '<option value="">請選擇 / Chọn</option>' + processingMethods.map((m, idx)=>`<option value="${idx}">${m.cn} / ${m.vn}</option>`).join('');
+  return '<option value="">請選擇 / Chọn</option>' + getProcessingMethodsSafe().map((m, idx)=>`<option value="${idx}">${escapeHtml(m.cn)} / ${escapeHtml(m.vn)}</option>`).join('');
 }
 function refreshMethodSelects(){
   if($('quoteMethod')) $('quoteMethod').innerHTML = methodOptionsHtml();
@@ -234,8 +275,10 @@ function refreshMethodSelects(){
 function applyQuoteMethod(){
   const idx = $('quoteMethod').value;
   if(idx === '') return;
-  const m = processingMethods[Number(idx)];
-  let found = data.items.find(i => i.name === m.cn);
+  const m = getProcessingMethodsSafe()[Number(idx)];
+  if(!m) return;
+  const customerId=Number($('quoteCustomer').value||0);
+  let found = data.items.find(i => i.name === m.cn && (!customerId||i.customerId===customerId));
   if(found){
     $('quoteItem').value = found.id;
     $('quotePrice').value = found.price || 0;
@@ -244,9 +287,11 @@ function applyQuoteMethod(){
 function applyInvoiceMethod(){
   const idx = $('invMethod').value;
   if(idx === '') return;
-  const m = processingMethods[Number(idx)];
+  const m = getProcessingMethodsSafe()[Number(idx)];
+  if(!m) return;
   $('invDesc').value = m.cn + ' / ' + m.vn;
-  let found = data.items.find(i => i.name === m.cn);
+  const customerId=Number($('invCustomer').value||0);
+  let found = data.items.find(i => i.name === m.cn && (!customerId||i.customerId===customerId));
   if(found){ $('invPrice').value = found.price || 0; }
 }
 const itemTranslateDict = {
@@ -326,8 +371,11 @@ function autoTranslateItem(force=false){
     alert('詞庫目前沒有這個項目，請手動輸入越文。之後可以再幫你加入詞庫。');
   }
 }
-function save(){localStorage.setItem(storeKey,JSON.stringify(data));refreshAll()}
-function today(){return new Date().toISOString().slice(0,10)}
+function save(){
+  try{data.schemaVersion=schemaVersion;localStorage.setItem(storeKey,JSON.stringify(data));refreshAll();return true}
+  catch(error){alert('資料儲存失敗，可能是瀏覽器儲存空間不足。請先匯出備份。');return false}
+}
+function today(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
 $('quoteDate').value=today(); $('invDate').value=today();
 function money(n){return Number(n||0).toLocaleString('vi-VN',{maximumFractionDigits:2})}
 function moneyWithCurrency(n, currency){
@@ -340,6 +388,7 @@ function customerName(id){return getCustomer(id).name||''}
 function addCustomer(){
  const c={id:editingCustomerId||Date.now(),name:$('custName').value.trim(),vn:$('custVN').value.trim(),contact:$('custContact').value.trim(),phone:$('custPhone').value.trim(),payment:$('custPayment').value.trim(),address:$('custAddress').value.trim()};
  if(!c.name)return alert('請輸入客戶名稱');
+ if(data.customers.some(x=>x.id!==editingCustomerId&&String(x.name||'').toLowerCase()===c.name.toLowerCase()))return alert('已有相同名稱的客戶');
  if(editingCustomerId){
    const idx=data.customers.findIndex(x=>x.id===editingCustomerId);
    if(idx>=0)data.customers[idx]=c;
@@ -364,11 +413,17 @@ function editCustomer(id){
  showSection('customers',document.querySelectorAll('nav button')[0]);
  alert('已載入客戶資料，修改後按新增客戶即可儲存');
 }
-function deleteCustomer(id){if(!confirm('確定刪除此客戶？'))return;data.customers=data.customers.filter(c=>c.id!==id);data.items=data.items.filter(i=>i.customerId!==id);save()}
+function deleteCustomer(id){
+  if(data.quotes.some(q=>q.customerId===id)||data.invoices.some(inv=>inv.customerId===id))return alert('此客戶已有報價或請款紀錄，為避免帳務資料斷裂，不能直接刪除。');
+  if(!confirm('確定刪除此客戶及其加工項目？'))return;
+  data.customers=data.customers.filter(c=>c.id!==id);data.items=data.items.filter(i=>i.customerId!==id);save();
+}
 
 function addItem(){
  const i={id:editingItemId||Date.now(),customerId:Number($('itemCustomer').value),name:$('itemName').value.trim(),vn:$('itemVN').value.trim(),price:Number($('itemPrice').value||0),unit:'雙',note:$('itemNote').value.trim()};
  if(!i.customerId)return alert('請先選客戶'); if(!i.name)return alert('請輸入加工項目');
+ if(!Number.isFinite(i.price)||i.price<0)return alert('單價不能小於 0');
+ if(data.items.some(x=>x.id!==editingItemId&&x.customerId===i.customerId&&String(x.name||'').toLowerCase()===i.name.toLowerCase()))return alert('此客戶已有相同加工項目');
  if(editingItemId){const idx=data.items.findIndex(x=>x.id===editingItemId);if(idx>=0)data.items[idx]=i;editingItemId=null;$('itemSaveBtn').textContent='新增加工項目 / Thêm công đoạn';alert('加工項目已修改')}
  else data.items.push(i);
  ['itemName','itemVN','itemPrice','itemNote'].forEach(id=>$(id).value='');$('itemUnit').value='雙';save()
@@ -378,36 +433,61 @@ function cancelItemEdit(){editingItemId=null;['itemName','itemVN','itemPrice','i
 function deleteItem(id){if(!confirm('確定刪除此加工項目？'))return;data.items=data.items.filter(i=>i.id!==id);save()}
 
 function refreshSelects(){
- ['itemCustomer','quoteCustomer','invCustomer'].forEach(id=>{const el=$(id),cur=el.value;el.innerHTML='<option value="">請選擇 / Chọn</option>'+data.customers.map(c=>`<option value="${c.id}">${c.name}${c.vn?' / '+c.vn:''}</option>`).join('');el.value=cur});
- refreshQuoteItems();refreshInvoiceQuoteSelect();refreshMethodSelects();refreshMethodSelects()
+ ['itemCustomer','quoteCustomer','invCustomer'].forEach(id=>{const el=$(id),cur=el.value;el.innerHTML='<option value="">請選擇 / Chọn</option>'+data.customers.map(c=>`<option value="${Number(c.id)}">${escapeHtml(c.name)}${c.vn?' / '+escapeHtml(c.vn):''}</option>`).join('');el.value=cur});
+ refreshQuoteItems();refreshInvoiceQuoteSelect();refreshMethodSelects()
 }
 function refreshQuoteItems(){
  const cid=Number($('quoteCustomer').value);const list=data.items.filter(i=>!cid||i.customerId===cid);
- $('quoteItem').innerHTML='<option value="">請選擇 / Chọn</option>'+list.map(i=>`<option value="${i.id}">${i.name}${i.vn?' / '+i.vn:''} - ${money(i.price)}</option>`).join('')
+ $('quoteItem').innerHTML='<option value="">請選擇 / Chọn</option>'+list.map(i=>`<option value="${Number(i.id)}">${escapeHtml(i.name)}${i.vn?' / '+escapeHtml(i.vn):''} - ${money(i.price)}</option>`).join('')
 }
 $('quoteCustomer').addEventListener('change',refreshQuoteItems);
 $('quoteItem').addEventListener('change',()=>{const item=data.items.find(i=>i.id===Number($('quoteItem').value));if(item)$('quotePrice').value=item.price});
 
 function addQuoteLine(){
- const selectedMethod=$('quoteMethod')&&$('quoteMethod').value!==''?processingMethods[Number($('quoteMethod').value)]:null;
+ if(!$('quoteCustomer').value)return alert('請先選擇客戶');
+ const selectedMethod=$('quoteMethod')&&$('quoteMethod').value!==''?getProcessingMethodsSafe()[Number($('quoteMethod').value)]:null;
  const item=data.items.find(i=>i.id===Number($('quoteItem').value));
  if(!item&&!selectedMethod)return alert('請選加工方式或加工項目');
  const desc=item?item.name:selectedMethod.cn;
  const vn=item?item.vn:selectedMethod.vn;
  const qty=Number($('quoteQty').value||0),price=Number($('quotePrice').value||(item?item.price:0)||0);
- quoteLines.push({workNo:$('quoteWorkNo').value.trim(),model:$('quoteModel').value.trim(),orderNo:$('quoteOrder').value.trim(),desc,vn,unit:'雙',note:$('quoteLineNote')?$('quoteLineNote').value.trim():'',qty,price,amount:qty*price});
- $('quoteQty').value='';if($('quoteLineNote'))$('quoteLineNote').value='';renderQuote()
+ if(!Number.isFinite(qty)||qty<=0)return alert('數量必須大於 0');
+ if(!Number.isFinite(price)||price<0)return alert('單價不能小於 0');
+ quoteLines.push({id:uid(),workNo:$('quoteWorkNo').value.trim(),model:$('quoteModel').value.trim(),orderNo:$('quoteOrder').value.trim(),desc,vn,unit:'雙',note:$('quoteLineNote')?$('quoteLineNote').value.trim():'',qty,price,amount:qty*price});
+ $('quoteQty').value='';if($('quoteLineNote'))$('quoteLineNote').value='';renderQuote();renderQuoteEditor()
 }
-function clearQuoteLines(){quoteLines=[];renderQuote()}
-function saveQuote(){if(!$('quoteCustomer').value||quoteLines.length===0)return alert('請選客戶並加入明細');data.quotes.push({id:Date.now(),date:$('quoteDate').value,customerId:Number($('quoteCustomer').value),currency:$('quoteCurrency').value,note:$('quoteNote').value,lines:quoteLines});alert('報價單已儲存');save()}
+function clearQuoteLines(){if(quoteLines.length&&!confirm('確定清空目前報價明細？'))return;quoteLines=[];renderQuote();renderQuoteEditor()}
+function documentNo(prefix,id,date){return `${prefix}-${String(date||today()).replaceAll('-','')}-${String(id).slice(-5)}`}
+function saveQuote(){
+ if(!$('quoteDate').value)return alert('請選擇報價日期');
+ if(!$('quoteCustomer').value||quoteLines.length===0)return alert('請選客戶並加入明細');
+ const id=editingQuoteId||uid();
+ const existing=data.quotes.find(q=>q.id===id);
+ if(existing){
+   const hasInvoices=data.invoices.some(inv=>inv.status!=='void'&&(inv.sourceQuoteId===id||(inv.lines||[]).some(l=>l.quoteId===id)));
+   if(hasInvoices&&(existing.customerId!==Number($('quoteCustomer').value)||existing.currency!==$('quoteCurrency').value))return alert('已有請款紀錄，不能變更報價客戶或幣別');
+   for(const oldLine of existing.lines||[]){if(!quoteLines.some(l=>l.id===oldLine.id)&&getBilledQty(id,oldLine.id)>0)return alert(`${oldLine.desc} 已有請款紀錄，不能刪除`)}
+   for(const line of quoteLines){const billed=getBilledQty(id,line.id);if(safeNumber(line.qty)<billed-0.000001)return alert(`${line.desc} 已請款 ${money(billed)}，報價數量不能低於已請數量`)}
+ }
+ const record={id,docNo:existing?.docNo||documentNo('BG',id,$('quoteDate').value),date:$('quoteDate').value,customerId:Number($('quoteCustomer').value),currency:$('quoteCurrency').value,note:$('quoteNote').value.trim(),lines:cloneLines(quoteLines)};
+ if(existing)Object.assign(existing,record);else data.quotes.push(record);
+ editingQuoteId=id;
+ if(save())alert(existing?'報價單已更新':'報價單已儲存');
+}
+function newQuote(){
+ if(quoteLines.length&&!confirm('建立新報價會清除目前畫面上的草稿，確定繼續？'))return;
+ editingQuoteId=null;quoteLines=[];$('quoteDate').value=today();$('quoteCustomer').value='';$('quoteCurrency').value='VND';$('quoteWorkNo').value='';$('quoteOrder').value='';$('quoteModel').value='';$('quoteQty').value='';$('quotePrice').value='';$('quoteNote').value='';renderQuote();renderQuoteEditor();refreshQuoteItems();
+}
 function renderQuote(){
- const c=getCustomer($('quoteCustomer').value), total=quoteLines.reduce((s,l)=>s+l.amount,0), currency=$('quoteCurrency').value;
+ const c=getCustomer($('quoteCustomer').value), currency=$('quoteCurrency').value;
+ const saved=editingQuoteId?data.quotes.find(q=>q.id===editingQuoteId):null;
  $('quotePrint').innerHTML=`
  <div class="company"><div class="cn">香蘭鞋材有限公司</div><div class="vn">CÔNG TY TNHH HƯƠNG LAN</div></div>
  <div class="print-title">報價單 / BẢNG BÁO GIÁ</div>
+ <p class="center"><b>單號 / Mã số：</b>${escapeHtml(saved?.docNo||'草稿')}</p>
  <table>
-  <tr><td>日期 / Ngày</td><td>${$('quoteDate').value||''}</td><td>客戶名稱 / Tên khách hàng</td><td>${c.name||''}</td></tr>
-  <tr><td>聯絡人 / Người liên hệ</td><td>${c.contact||''}</td><td>幣別 / Tiền tệ</td><td>${currency}</td></tr>
+  <tr><td>日期 / Ngày</td><td>${escapeHtml($('quoteDate').value)}</td><td>客戶名稱 / Tên khách hàng</td><td>${escapeHtml(c.name)}</td></tr>
+  <tr><td>聯絡人 / Người liên hệ</td><td>${escapeHtml(c.contact)}</td><td>幣別 / Tiền tệ</td><td>${escapeHtml(currency)}</td></tr>
  </table>
  <table>
   <thead><tr>
@@ -415,50 +495,102 @@ function renderQuote(){
     <th>訂單編號<br>Số đơn hàng</th>
     <th>型體<br>Hình thể</th>
     <th>代工項目<br>Công đoạn gia công</th>
-    <th>完成數量<br>Số lượng hoàn thành</th>
     <th>單位<br>Đơn vị</th>
     <th class="right">單價<br>Đơn giá</th>
-    <th class="right">總金額<br>Tổng tiền</th>
   </tr></thead>
-  <tbody>${quoteLines.map(l=>`<tr><td>${l.workNo||''}</td><td>${l.orderNo||''}</td><td>${l.model||''}</td><td>${l.desc}${l.vn ? '<br>'+l.vn : ''}${l.note ? '<br><small>備註：'+l.note+'</small>' : ''}</td><td class="right">${money(l.qty)}</td><td>雙<br>Đôi</td><td class="right">${moneyWithCurrency(l.price,currency)}</td><td class="right">${moneyWithCurrency(l.amount,currency)}</td></tr>`).join('')}</tbody>
-  <tfoot><tr><th colspan="7" class="right">合計 / Tổng cộng</th><th class="right">${moneyWithCurrency(total,currency)}</th></tr></tfoot>
+  <tbody>${quoteLines.map(l=>`<tr><td>${escapeHtml(l.workNo)}</td><td>${escapeHtml(l.orderNo)}</td><td>${escapeHtml(l.model)}</td><td>${escapeHtml(l.desc)}${l.vn ? '<br>'+escapeHtml(l.vn) : ''}${l.note ? '<br><small>備註：'+escapeHtml(l.note)+'</small>' : ''}</td><td>雙<br>Đôi</td><td class="right">${moneyWithCurrency(l.price,currency)}</td></tr>`).join('')}</tbody>
  </table>
- <p><b>備註 / Ghi chú：</b>${$('quoteNote').value||''}</p>
+ <p><b>備註 / Ghi chú：</b>${escapeHtml($('quoteNote').value)}</p>
  <div class="signature">
    <div class="sig-box"></div>
    <div class="sig-box">客戶確認<br>Khách hàng xác nhận</div>
  </div>`
 }
 
+function renderQuoteEditor(){
+ const el=$('quoteLineEditor');if(!el)return;
+ if(!quoteLines.length){el.innerHTML='<p class="muted">尚無明細</p>';return}
+ el.innerHTML='<div class="table-wrap"><table><thead><tr><th>內容</th><th>內部控管數量</th><th>單價</th><th>操作</th></tr></thead><tbody>'+quoteLines.map((l,i)=>`<tr><td>${escapeHtml(l.desc)}</td><td><input type="number" min="0.01" step="0.01" value="${safeNumber(l.qty)}" onchange="updateQuoteQty(${i},this.value)"></td><td><input type="number" min="0" step="0.01" value="${safeNumber(l.price)}" onchange="updateQuotePrice(${i},this.value)"></td><td><button class="btn danger" onclick="deleteQuoteLine(${i})">刪除</button></td></tr>`).join('')+'</tbody></table></div>';
+}
+function updateQuoteQty(index,value){const qty=safeNumber(value,-1);if(qty<=0)return alert('數量必須大於 0');quoteLines[index].qty=qty;quoteLines[index].amount=qty*safeNumber(quoteLines[index].price);renderQuote();renderQuoteEditor()}
+function updateQuotePrice(index,value){const price=safeNumber(value,-1);if(price<0)return alert('單價不能小於 0');quoteLines[index].price=price;quoteLines[index].amount=safeNumber(quoteLines[index].qty)*price;renderQuote();renderQuoteEditor()}
+function deleteQuoteLine(index){const line=quoteLines[index];if(editingQuoteId&&line&&getBilledQty(editingQuoteId,line.id)>0)return alert('此明細已有請款紀錄，不能刪除');quoteLines.splice(index,1);renderQuote();renderQuoteEditor()}
+function getBilledQty(quoteId,quoteLineId,excludeInvoiceId=null){
+ return data.invoices.filter(inv=>inv.status!=='void'&&inv.id!==excludeInvoiceId).flatMap(inv=>inv.lines||[]).filter(line=>line.quoteId===quoteId&&line.quoteLineId===quoteLineId).reduce((sum,line)=>sum+safeNumber(line.qty),0);
+}
+function getRemainingQty(quote,line,excludeInvoiceId=null){return Math.max(0,safeNumber(line.qty)-getBilledQty(quote.id,line.id,excludeInvoiceId))}
+function getQuoteStatus(quote){
+ const total=(quote.lines||[]).reduce((sum,line)=>sum+safeNumber(line.qty),0);
+ const remaining=(quote.lines||[]).reduce((sum,line)=>sum+getRemainingQty(quote,line),0);
+ if(total>0&&remaining<=0.000001)return {key:'done',label:'已請完'};
+ if(remaining<total)return {key:'partial',label:'部分請款'};
+ return {key:'open',label:'未請款'};
+}
+
 function refreshInvoiceQuoteSelect(){
- const el=$('invoiceQuoteSelect'); if(!el)return; const cid=Number($('invCustomer').value||0);
+ const el=$('invoiceQuoteSelect'); if(!el)return; const cid=Number($('invCustomer').value||0);const current=el.value;
  const list=data.quotes.filter(q=>!cid||q.customerId===cid);
- el.innerHTML='<option value="">請選擇報價單 / Chọn báo giá</option>'+list.map(q=>{const c=getCustomer(q.customerId);const total=(q.lines||[]).reduce((s,l)=>s+Number(l.amount||0),0);return `<option value="${q.id}">${q.date||''}｜${c.name||''}｜${moneyWithCurrency(total,q.currency||'VND')}</option>`}).join('')
+ el.innerHTML='<option value="">請選擇報價單 / Chọn báo giá</option>'+list.map(q=>{const c=getCustomer(q.customerId);const status=getQuoteStatus(q);return `<option value="${Number(q.id)}" ${status.key==='done'?'disabled':''}>${escapeHtml(q.docNo||q.date||'未編號')}｜${escapeHtml(c.name)}｜${status.label}</option>`}).join('');
+ if(current)el.value=current;
 }
 function loadQuoteToInvoice(){
  const q=data.quotes.find(x=>x.id===Number($('invoiceQuoteSelect').value)); if(!q)return alert('請先選擇報價單');
- $('invCustomer').value=q.customerId; if(q.currency){$('invCurrency').value=q.currency;} invoiceLines=(q.lines||[]).map(l=>({workNo:l.workNo||'',model:l.model||'',orderNo:l.orderNo||'',desc:(l.desc||'')+(l.vn?' / '+l.vn:''),qty:Number(l.qty||0),price:Number(l.price||0),amount:Number(l.amount||(Number(l.qty||0)*Number(l.price||0)))})); if(invoiceLines[0]){$('invWorkNo').value=invoiceLines[0].workNo||'';$('invModel').value=invoiceLines[0].model||'';$('invOrder').value=invoiceLines[0].orderNo||'';}
- renderInvoice();refreshInvoiceQuoteSelect();alert('已帶入報價單資料')
+ const available=(q.lines||[]).map(l=>({line:l,billed:getBilledQty(q.id,l.id),remaining:getRemainingQty(q,l)})).filter(x=>x.remaining>0.000001);
+ if(!available.length)return alert('此報價單已全部請款完成');
+ editingInvoiceId=null;$('invCustomer').value=q.customerId;if(q.currency)$('invCurrency').value=q.currency;
+ invoiceLines=available.map(({line:l,billed,remaining})=>({quoteId:q.id,quoteLineId:l.id,quotedQty:safeNumber(l.qty),billedBefore:billed,remainingBefore:remaining,workNo:l.workNo||'',model:l.model||'',orderNo:l.orderNo||'',desc:(l.desc||'')+(l.vn?' / '+l.vn:''),note:l.note||'',qty:remaining,price:safeNumber(l.price),amount:remaining*safeNumber(l.price)}));
+ if(invoiceLines[0]){$('invWorkNo').value=invoiceLines[0].workNo||'';$('invModel').value=invoiceLines[0].model||'';$('invOrder').value=invoiceLines[0].orderNo||'';}
+ $('invoiceQuoteSummary').className='notice';$('invoiceQuoteSummary').textContent=`報價 ${q.docNo||q.date||''}：已帶入 ${available.length} 筆尚未請款明細，可在下方修改本次請款數量。`;
+ renderInvoice();renderInvoiceEditor();refreshInvoiceQuoteSelect();
 }
 function addInvoiceLine(){
- const selectedMethod=$('invMethod')&&$('invMethod').value!==''?processingMethods[Number($('invMethod').value)]:null;
+ if(!$('invCustomer').value)return alert('請先選擇客戶');
+ const selectedMethod=$('invMethod')&&$('invMethod').value!==''?getProcessingMethodsSafe()[Number($('invMethod').value)]:null;
  let desc=$('invDesc').value.trim();if(!desc&&selectedMethod)desc=selectedMethod.cn+' / '+selectedMethod.vn;
  const qty=Number($('invQty').value||0),price=Number($('invPrice').value||0);
  if(!desc)return alert('請輸入內容或選擇加工方式');
+ if(!Number.isFinite(qty)||qty<=0)return alert('數量必須大於 0');
+ if(!Number.isFinite(price)||price<0)return alert('單價不能小於 0');
  invoiceLines.push({workNo:$('invWorkNo').value.trim(),model:$('invModel').value.trim(),orderNo:$('invOrder').value.trim(),desc,note:$('invLineNote')?$('invLineNote').value.trim():'',qty,price,amount:qty*price});
- $('invDesc').value='';$('invQty').value='';$('invPrice').value='';if($('invLineNote'))$('invLineNote').value='';renderInvoice()
+ $('invDesc').value='';$('invQty').value='';$('invPrice').value='';if($('invLineNote'))$('invLineNote').value='';renderInvoice();renderInvoiceEditor()
 }
-function clearInvoiceLines(){invoiceLines=[];renderInvoice()}
-function saveInvoice(){if(!$('invCustomer').value||invoiceLines.length===0)return alert('請選客戶並加入明細');data.invoices.push({id:Date.now(),date:$('invDate').value,customerId:Number($('invCustomer').value),currency:$('invCurrency').value,note:$('invNote').value,lines:invoiceLines});alert('請款單已儲存');save()}
+function clearInvoiceLines(){if(invoiceLines.length&&!confirm('確定清空目前請款明細？'))return;invoiceLines=[];renderInvoice();renderInvoiceEditor()}
+function saveInvoice(){
+ if(!$('invDate').value)return alert('請選擇請款日期');
+ if(!$('invCustomer').value||invoiceLines.length===0)return alert('請選客戶並加入明細');
+ for(const line of invoiceLines){
+   if(!Number.isFinite(Number(line.qty))||Number(line.qty)<=0)return alert('每筆請款數量都必須大於 0');
+   if(!Number.isFinite(Number(line.price))||Number(line.price)<0)return alert('單價不能小於 0');
+   if(line.quoteId&&line.quoteLineId){
+     const quote=data.quotes.find(q=>q.id===line.quoteId);const quoteLine=quote?.lines?.find(l=>l.id===line.quoteLineId);
+     if(!quote||!quoteLine)return alert('來源報價資料已不存在，請重新帶入報價單');
+     const allowed=getRemainingQty(quote,quoteLine,editingInvoiceId);
+     if(Number(line.qty)>allowed+0.000001)return alert(`${line.desc} 本次請款 ${money(line.qty)}，超過可請餘量 ${money(allowed)}`);
+   }
+ }
+ const id=editingInvoiceId||uid();const existing=data.invoices.find(inv=>inv.id===id);const sourceQuoteIds=[...new Set(invoiceLines.map(l=>l.quoteId).filter(Boolean))];
+ if(sourceQuoteIds.length>1)return alert('一張請款單不能混用多張報價單');
+ if(sourceQuoteIds.length===1){const source=data.quotes.find(q=>q.id===sourceQuoteIds[0]);if(source&&(source.customerId!==Number($('invCustomer').value)||source.currency!==$('invCurrency').value))return alert('請款單的客戶與幣別必須和來源報價一致')}
+ const record={id,docNo:existing?.docNo||documentNo('QK',id,$('invDate').value),date:$('invDate').value,customerId:Number($('invCustomer').value),currency:$('invCurrency').value,note:$('invNote').value.trim(),status:existing?.status||'issued',sourceQuoteId:sourceQuoteIds.length===1?sourceQuoteIds[0]:null,lines:cloneLines(invoiceLines)};
+ if(existing)Object.assign(existing,record);else data.invoices.push(record);editingInvoiceId=id;
+ if(save())alert(existing?'請款單已更新':'請款單已儲存，報價剩餘數量已同步更新');
+}
+function newInvoice(){
+ if(invoiceLines.length&&!confirm('建立新請款會清除目前畫面上的草稿，確定繼續？'))return;
+ editingInvoiceId=null;invoiceLines=[];$('invDate').value=today();$('invCustomer').value='';$('invCurrency').value='VND';$('invWorkNo').value='';$('invOrder').value='';$('invModel').value='';$('invDesc').value='';$('invQty').value='';$('invPrice').value='';$('invNote').value='';$('invoiceQuoteSelect').value='';$('invoiceQuoteSummary').className='notice';$('invoiceQuoteSummary').textContent='選擇報價單後，系統會帶入尚未請款的剩餘數量。';renderInvoice();renderInvoiceEditor();refreshInvoiceQuoteSelect();
+}
 function renderInvoice(){
- const c=getCustomer($('invCustomer').value), total=invoiceLines.reduce((s,l)=>s+l.amount,0), currency=$('invCurrency').value;
+ const c=getCustomer($('invCustomer').value), total=invoiceLines.reduce((s,l)=>s+safeNumber(l.amount),0), currency=$('invCurrency').value;
+ const saved=editingInvoiceId?data.invoices.find(inv=>inv.id===editingInvoiceId):null;
+ const sourceQuoteId=invoiceLines.find(l=>l.quoteId)?.quoteId;const sourceQuote=data.quotes.find(q=>q.id===sourceQuoteId);
  $('invoicePrint').innerHTML=`
  <div class="company"><div class="cn">香蘭鞋材有限公司</div><div class="vn">CÔNG TY TNHH HƯƠNG LAN</div></div>
  <div class="print-title">請款單 / PHIẾU THANH TOÁN</div>
+ <p class="center"><b>單號 / Mã số：</b>${escapeHtml(saved?.docNo||'草稿')}${sourceQuote?`　<b>來源報價：</b>${escapeHtml(sourceQuote.docNo||sourceQuote.date)}`:''}</p>
  <table>
-  <tr><td>日期 / Ngày</td><td>${$('invDate').value||''}</td><td>客戶名稱 / Tên khách hàng</td><td>${c.name||''}</td></tr>
-  <tr><td>幣別 / Tiền tệ</td><td colspan="3">${currency}</td></tr>
-  <tr><td>地址 / Địa chỉ</td><td colspan="3">${c.address||''}</td></tr>
+  <tr><td>日期 / Ngày</td><td>${escapeHtml($('invDate').value)}</td><td>客戶名稱 / Tên khách hàng</td><td>${escapeHtml(c.name)}</td></tr>
+  <tr><td>幣別 / Tiền tệ</td><td colspan="3">${escapeHtml(currency)}</td></tr>
+  <tr><td>地址 / Địa chỉ</td><td colspan="3">${escapeHtml(c.address)}</td></tr>
  </table>
  <table>
   <thead><tr>
@@ -470,10 +602,10 @@ function renderInvoice(){
     <th class="right">單價<br>Đơn giá</th>
     <th class="right">總金額<br>Tổng tiền</th>
   </tr></thead>
-  <tbody>${invoiceLines.map(l=>`<tr><td>${l.workNo||''}</td><td>${l.orderNo||''}</td><td>${l.model||''}</td><td>${l.desc}</td><td class="right">${money(l.qty)}</td><td class="right">${moneyWithCurrency(l.price,currency)}</td><td class="right">${moneyWithCurrency(l.amount,currency)}</td></tr>`).join('')}</tbody>
+  <tbody>${invoiceLines.map(l=>`<tr><td>${escapeHtml(l.workNo)}</td><td>${escapeHtml(l.orderNo)}</td><td>${escapeHtml(l.model)}</td><td>${escapeHtml(l.desc)}${l.note?'<br><small>備註：'+escapeHtml(l.note)+'</small>':''}</td><td class="right">${money(l.qty)}</td><td class="right">${moneyWithCurrency(l.price,currency)}</td><td class="right">${moneyWithCurrency(l.amount,currency)}</td></tr>`).join('')}</tbody>
   <tfoot><tr><th colspan="6" class="right">合計金額 / Tổng số tiền</th><th class="right">${moneyWithCurrency(total,currency)}</th></tr></tfoot>
  </table>
- <p><b>備註 / Ghi chú：</b>${$('invNote').value||''}</p>
+ <p><b>備註 / Ghi chú：</b>${escapeHtml($('invNote').value)}</p>
  <div class="signature"><div class="sig-box">客戶簽收<br>Khách hàng xác nhận</div><div class="sig-box">製表人<br>Người lập biểu</div></div>`
 }
 
@@ -481,8 +613,8 @@ function renderInvoice(){
 ['invDate','invCustomer','invNote','invCurrency'].forEach(id=>$(id).addEventListener('input',()=>{renderInvoice();refreshInvoiceQuoteSelect()}));
 
 function refreshTables(){
- $('customerTable').innerHTML=data.customers.length?`<table><thead><tr><th>客戶<br>Khách hàng</th><th>越文<br>Tiếng Việt</th><th>聯絡人<br>Liên hệ</th><th>電話<br>Điện thoại</th><th>付款<br>Thanh toán</th><th>操作</th></tr></thead><tbody>${data.customers.map(c=>`<tr><td>${c.name}</td><td>${c.vn||''}</td><td>${c.contact||''}</td><td>${c.phone||''}</td><td>${c.payment||''}</td><td><button class="btn light js-action" data-action="editCustomer" data-id="${c.id}">修改</button> <button class="btn danger js-action" data-action="deleteCustomer" data-id="${c.id}">刪除</button></td></tr>`).join('')}</tbody></table>`:'<p class="muted">尚無客戶資料</p>';
- $('itemTable').innerHTML=data.items.length?`<table><thead><tr><th>客戶<br>Khách hàng</th><th>中文項目</th><th>越文項目</th><th>單位</th><th>單價</th><th>操作</th></tr></thead><tbody>${data.items.map(i=>`<tr><td>${customerName(i.customerId)}</td><td>${i.name}</td><td>${i.vn||''}</td><td>${i.unit||'雙'}</td><td>${money(i.price)}</td><td><button class="btn light js-action" data-action="editItem" data-id="${i.id}">修改</button> <button class="btn danger js-action" data-action="deleteItem" data-id="${i.id}">刪除</button></td></tr>`).join('')}</tbody></table>`:'<p class="muted">尚無加工項目</p>';
+ $('customerTable').innerHTML=data.customers.length?`<div class="table-wrap"><table><thead><tr><th>客戶<br>Khách hàng</th><th>越文<br>Tiếng Việt</th><th>聯絡人<br>Liên hệ</th><th>電話<br>Điện thoại</th><th>付款<br>Thanh toán</th><th>操作</th></tr></thead><tbody>${data.customers.map(c=>`<tr><td>${escapeHtml(c.name)}</td><td>${escapeHtml(c.vn)}</td><td>${escapeHtml(c.contact)}</td><td>${escapeHtml(c.phone)}</td><td>${escapeHtml(c.payment)}</td><td><button class="btn light js-action" data-action="editCustomer" data-id="${Number(c.id)}">修改</button> <button class="btn danger js-action" data-action="deleteCustomer" data-id="${Number(c.id)}">刪除</button></td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">尚無客戶資料</p>';
+ $('itemTable').innerHTML=data.items.length?`<div class="table-wrap"><table><thead><tr><th>客戶<br>Khách hàng</th><th>中文項目</th><th>越文項目</th><th>單位</th><th>單價</th><th>操作</th></tr></thead><tbody>${data.items.map(i=>`<tr><td>${escapeHtml(customerName(i.customerId))}</td><td>${escapeHtml(i.name)}</td><td>${escapeHtml(i.vn)}</td><td>${escapeHtml(i.unit||'雙')}</td><td>${money(i.price)}</td><td><button class="btn light js-action" data-action="editItem" data-id="${Number(i.id)}">修改</button> <button class="btn danger js-action" data-action="deleteItem" data-id="${Number(i.id)}">刪除</button></td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">尚無加工項目</p>';
  bindActionButtons();
 }
 function bindActionButtons(){
@@ -500,28 +632,24 @@ function bindActionButtons(){
    });
  });
 }
-function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='香蘭鞋材管理系統V4備份.json';a.click();URL.revokeObjectURL(url)}
-function importData(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{data=JSON.parse(reader.result);save();alert('匯入完成')}catch{alert('匯入失敗')}};reader.readAsText(file)}
-function clearAll(){if(!confirm('確定清除全部資料？此動作無法復原'))return;data={customers:[],items:[],quotes:[],invoices:[]};quoteLines=[];invoiceLines=[];save()}
+function exportData(){const payload={schemaVersion,exportedAt:new Date().toISOString(),data,processingMethods:getProcessingMethodsSafe()};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`香蘭鞋材管理系統V4.13備份_${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),0)}
+function importData(e){
+ const file=e.target.files[0];if(!file)return;const reader=new FileReader();
+ reader.onload=()=>{try{const parsed=JSON.parse(reader.result);const candidate=parsed.data&&typeof parsed.data==='object'?parsed.data:parsed;if(!candidate||!['customers','items','quotes','invoices'].some(k=>Array.isArray(candidate[k])))throw new Error('invalid schema');if(!confirm('匯入會覆蓋目前資料，確定繼續？'))return;data=normalizeData(candidate);if(Array.isArray(parsed.processingMethods))setProcessingMethodsSafe(parsed.processingMethods);editingQuoteId=null;editingInvoiceId=null;quoteLines=[];invoiceLines=[];save();alert('匯入完成')}catch(error){alert('匯入失敗：檔案格式不正確')}finally{e.target.value=''}};
+ reader.readAsText(file);
+}
+function clearAll(){if(!confirm('確定清除全部資料與自訂加工方式？此動作無法復原'))return;data=emptyData();quoteLines=[];invoiceLines=[];editingQuoteId=null;editingInvoiceId=null;localStorage.removeItem(methodStoreKey);save()}
 
 function getDefaultProcessingMethodsSafe(){
-  return [
-    {cn:"包跟", vn:"Bọc gót"},
-    {cn:"中底包頭包邊", vn:"Bọc mũi và viền đế giữa"},
-    {cn:"中底包邊", vn:"Bọc viền đế giữa"},
-    {cn:"大底組沿條", vn:"Lắp đế ngoài và viền"},
-    {cn:"防水台包面料", vn:"Bọc vật liệu đế xuồng"},
-    {cn:"組底+打天皮", vn:"Lắp đế + đóng nắp gót"},
-    {cn:"包跟+組底+打天皮", vn:"Bọc gót + lắp đế + đóng nắp gót"}
-  ];
+  return defaultProcessingMethods.map(method=>({...method}));
 }
 function getProcessingMethodsSafe(){
-  const saved = localStorage.getItem('xianglan_processing_methods');
-  if(saved){ try{return JSON.parse(saved)}catch(e){} }
+  const saved = localStorage.getItem(methodStoreKey);
+  if(saved){ try{const list=JSON.parse(saved);if(Array.isArray(list))return list.filter(x=>x&&typeof x.cn==='string')}catch(e){} }
   return getDefaultProcessingMethodsSafe();
 }
 function setProcessingMethodsSafe(list){
-  localStorage.setItem('xianglan_processing_methods', JSON.stringify(list));
+  localStorage.setItem(methodStoreKey, JSON.stringify(list.map(x=>({cn:String(x.cn||'').trim(),vn:String(x.vn||'').trim()})).filter(x=>x.cn)));
 }
 function addProcessingMethodSafe(){
   const cn = $('methodCn') ? $('methodCn').value.trim() : '';
@@ -547,12 +675,12 @@ function deleteProcessingMethodSafe(idx){
 function renderMethodTableSafe(){
   if(!$('methodTable')) return;
   const list = getProcessingMethodsSafe();
-  $('methodTable').innerHTML = list.length ? `<table><thead><tr><th>中文</th><th>越文</th><th>操作</th></tr></thead><tbody>${list.map((m,i)=>`<tr><td>${m.cn}</td><td>${m.vn||''}</td><td><button class="btn danger" onclick="deleteProcessingMethodSafe(${i})">刪除</button></td></tr>`).join('')}</tbody></table>` : '<p class="muted">尚無加工方式</p>';
+  $('methodTable').innerHTML = list.length ? `<div class="table-wrap"><table><thead><tr><th>中文</th><th>越文</th><th>操作</th></tr></thead><tbody>${list.map((m,i)=>`<tr><td>${escapeHtml(m.cn)}</td><td>${escapeHtml(m.vn)}</td><td><button class="btn danger" onclick="deleteProcessingMethodSafe(${i})">刪除</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">尚無加工方式</p>';
 }
 function refreshMethodSelectsSafe(){
   // V4.2 原本已有下拉選單與 apply 函數；這裡只補充自訂選項，不破壞列印預覽
   const methods = getProcessingMethodsSafe();
-  const html = '<option value="">請選擇 / Chọn</option>' + methods.map((m,i)=>`<option value="${i}">${m.cn} / ${m.vn}</option>`).join('');
+  const html = '<option value="">請選擇 / Chọn</option>' + methods.map((m,i)=>`<option value="${i}">${escapeHtml(m.cn)} / ${escapeHtml(m.vn)}</option>`).join('');
   if($('quoteMethod')){
     const cur = $('quoteMethod').value;
     $('quoteMethod').innerHTML = html;
@@ -579,19 +707,33 @@ function renderHistorySafe(){
       if(okC && okM && okO) rows.push({date:q.date, customer:c.name||'', model:l.model||'', orderNo:l.orderNo||'', item:l.desc||'', qty:l.qty||0, price:l.price||0, amount:l.amount||0, currency:q.currency||'VND'});
     });
   });
-  $('historyTable').innerHTML = rows.length ? `<table><thead><tr><th>日期</th><th>客戶</th><th>型體</th><th>訂單編號</th><th>項目</th><th class="right">數量</th><th class="right">單價</th><th class="right">金額</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.date||''}</td><td>${r.customer}</td><td>${r.model}</td><td>${r.orderNo}</td><td>${r.item}</td><td class="right">${money(r.qty)}</td><td class="right">${moneyWithCurrency(r.price,r.currency)}</td><td class="right">${moneyWithCurrency(r.amount,r.currency)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">尚無符合資料</p>';
-  const map = {};
+  rows.sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+  $('historyTable').innerHTML = rows.length ? `<div class="table-wrap"><table><thead><tr><th>日期</th><th>客戶</th><th>型體</th><th>訂單編號</th><th>項目</th><th class="right">單價</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${escapeHtml(r.date)}</td><td>${escapeHtml(r.customer)}</td><td>${escapeHtml(r.model)}</td><td>${escapeHtml(r.orderNo)}</td><td>${escapeHtml(r.item)}</td><td class="right">${moneyWithCurrency(r.price,r.currency)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">尚無符合資料</p>';
+  const map = new Map();
   rows.forEach(r=>{
-    const key = r.item + '|' + r.currency;
-    if(!map[key]) map[key]=[];
-    map[key].push(r);
+    const key = JSON.stringify([r.item,r.currency]);
+    if(!map.has(key)) map.set(key,[]);
+    map.get(key).push(r);
   });
-  const priceRows = Object.keys(map).map(k=>{
-    const arr = map[k].slice(-5).reverse();
-    const item = k.split('|')[0], currency = k.split('|')[1];
-    return `<tr><td>${item}</td><td>${currency}</td><td>${arr.map(r=>`${r.date||''}：${money(r.price)}`).join('<br>')}</td></tr>`;
+  const priceRows = [...map.entries()].map(([key,values])=>{
+    const arr = values.slice(0,5);const [item,currency]=JSON.parse(key);
+    return `<tr><td>${escapeHtml(item)}</td><td>${escapeHtml(currency)}</td><td>${arr.map(r=>`${escapeHtml(r.date)}：${money(r.price)}`).join('<br>')}</td></tr>`;
   });
-  if($('priceHistoryTable')) $('priceHistoryTable').innerHTML = priceRows.length ? `<table><thead><tr><th>加工項目</th><th>幣別</th><th>最近單價</th></tr></thead><tbody>${priceRows.join('')}</tbody></table>` : '<p class="muted">尚無單價歷史</p>';
+  if($('priceHistoryTable')) $('priceHistoryTable').innerHTML = priceRows.length ? `<div class="table-wrap"><table><thead><tr><th>加工項目</th><th>幣別</th><th>最近單價</th></tr></thead><tbody>${priceRows.join('')}</tbody></table></div>` : '<p class="muted">尚無單價歷史</p>';
+  renderInvoiceHistorySafe(hc,hm,ho);
+}
+function renderInvoiceHistorySafe(hc='',hm='',ho=''){
+ const quoteRows=data.quotes.filter(q=>{const c=getCustomer(q.customerId);const lines=q.lines||[];return (!hc||(c.name||'').toLowerCase().includes(hc)||(c.vn||'').toLowerCase().includes(hc))&&(!hm||lines.some(l=>(l.model||'').toLowerCase().includes(hm)))&&(!ho||lines.some(l=>(l.orderNo||'').toLowerCase().includes(ho)))}).map(q=>{const c=getCustomer(q.customerId);const totalQty=(q.lines||[]).reduce((s,l)=>s+safeNumber(l.qty),0);const remaining=(q.lines||[]).reduce((s,l)=>s+getRemainingQty(q,l),0);const status=getQuoteStatus(q);return `<tr><td>${escapeHtml(q.docNo||q.date)}</td><td>${escapeHtml(c.name)}</td><td>${money(totalQty)}</td><td>${money(totalQty-remaining)}</td><td>${money(remaining)}</td><td><span class="status ${status.key}">${status.label}</span></td><td><button class="btn light" onclick="loadQuoteDocument(${Number(q.id)})">載入</button> <button class="btn danger" onclick="deleteQuoteDocument(${Number(q.id)})">刪除</button></td></tr>`}).join('');
+ const invoiceRows=data.invoices.filter(inv=>{const c=getCustomer(inv.customerId);const lines=inv.lines||[];return (!hc||(c.name||'').toLowerCase().includes(hc)||(c.vn||'').toLowerCase().includes(hc))&&(!hm||lines.some(l=>(l.model||'').toLowerCase().includes(hm)))&&(!ho||lines.some(l=>(l.orderNo||'').toLowerCase().includes(ho)))}).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(inv=>{const c=getCustomer(inv.customerId);const source=data.quotes.find(q=>q.id===inv.sourceQuoteId);const total=(inv.lines||[]).reduce((s,l)=>s+safeNumber(l.amount),0);return `<tr><td>${escapeHtml(inv.date)}</td><td>${escapeHtml(inv.docNo||'未編號')}</td><td>${escapeHtml(c.name)}</td><td>${escapeHtml(source?.docNo||'手動請款')}</td><td class="right">${moneyWithCurrency(total,inv.currency)}</td><td><span class="status ${inv.status==='void'?'partial':'done'}">${inv.status==='void'?'已作廢':'有效'}</span></td><td><button class="btn light" onclick="loadInvoiceDocument(${Number(inv.id)})">載入</button> <button class="btn danger" onclick="voidInvoiceDocument(${Number(inv.id)})">${inv.status==='void'?'恢復':'作廢'}</button></td></tr>`}).join('');
+ $('invoiceHistoryTable').innerHTML=`<h4>報價請款進度</h4>${quoteRows?`<div class="table-wrap"><table><thead><tr><th>報價單</th><th>客戶</th><th>報價數量</th><th>已請數量</th><th>剩餘數量</th><th>狀態</th><th>操作</th></tr></thead><tbody>${quoteRows}</tbody></table></div>`:'<p class="muted">尚無報價資料</p>'}<h4>請款單紀錄</h4>${invoiceRows?`<div class="table-wrap"><table><thead><tr><th>日期</th><th>請款單</th><th>客戶</th><th>來源報價</th><th class="right">金額</th><th>狀態</th><th>操作</th></tr></thead><tbody>${invoiceRows}</tbody></table></div>`:'<p class="muted">尚無請款紀錄</p>'}`;
+}
+function loadQuoteDocument(id){const q=data.quotes.find(x=>x.id===id);if(!q)return;editingQuoteId=q.id;quoteLines=cloneLines(q.lines);$('quoteDate').value=q.date||today();$('quoteCustomer').value=q.customerId;$('quoteCurrency').value=q.currency||'VND';$('quoteNote').value=q.note||'';showSection('quote',document.querySelectorAll('nav button')[2]);renderQuote();renderQuoteEditor()}
+function deleteQuoteDocument(id){if(data.invoices.some(inv=>inv.sourceQuoteId===id||(inv.lines||[]).some(l=>l.quoteId===id)))return alert('此報價已有請款紀錄，不能刪除；請先處理相關請款單。');if(!confirm('確定刪除此報價單？'))return;data.quotes=data.quotes.filter(q=>q.id!==id);if(editingQuoteId===id){editingQuoteId=null;quoteLines=[]}save()}
+function loadInvoiceDocument(id){const inv=data.invoices.find(x=>x.id===id);if(!inv)return;editingInvoiceId=inv.id;invoiceLines=cloneLines(inv.lines);$('invDate').value=inv.date||today();$('invCustomer').value=inv.customerId;$('invCurrency').value=inv.currency||'VND';$('invNote').value=inv.note||'';const source=data.quotes.find(q=>q.id===inv.sourceQuoteId);$('invoiceQuoteSummary').className='notice';$('invoiceQuoteSummary').textContent=source?`目前載入請款單 ${inv.docNo||''}，來源報價 ${source.docNo||source.date}`:`目前載入請款單 ${inv.docNo||''}`;showSection('invoice',document.querySelectorAll('nav button')[3]);renderInvoice();renderInvoiceEditor()}
+function voidInvoiceDocument(id){
+ const inv=data.invoices.find(x=>x.id===id);if(!inv)return;const next=inv.status==='void'?'issued':'void';
+ if(next==='issued'){for(const line of inv.lines||[]){if(!line.quoteId||!line.quoteLineId)continue;const quote=data.quotes.find(q=>q.id===line.quoteId);const quoteLine=quote?.lines?.find(l=>l.id===line.quoteLineId);const allowed=quote&&quoteLine?getRemainingQty(quote,quoteLine,id):0;if(safeNumber(line.qty)>allowed+0.000001)return alert(`${line.desc} 目前只剩 ${money(allowed)}，無法恢復此請款單`)}}
+ if(!confirm(next==='void'?'作廢後，數量會退回報價可請餘量。確定作廢？':'確定恢復此請款單？'))return;inv.status=next;save();
 }
 function refreshExtraPanelsSafe(){
   renderMethodTableSafe();
@@ -599,7 +741,44 @@ function refreshExtraPanelsSafe(){
   renderHistorySafe();
 }
 
-function refreshAll(){refreshSelects();refreshTables();renderQuote();renderInvoice();refreshExtraPanelsSafe()}
+
+function renderInvoiceEditor(){
+ const el=document.getElementById('invoiceLineEditor');
+ if(!el) return;
+ if(invoiceLines.length===0){el.innerHTML='<p>尚無明細</p>';return;}
+ el.innerHTML='<div class="table-wrap"><table><tr><th>內容</th><th>報價數量</th><th>先前已請</th><th>本次可請</th><th>本次數量</th><th>單價</th><th>操作</th></tr>'+
+ invoiceLines.map((l,i)=>`<tr>
+ <td>${escapeHtml(l.desc)}</td>
+ <td>${l.quoteLineId?money(l.quotedQty):'-'}</td>
+ <td>${l.quoteLineId?money(getBilledQty(l.quoteId,l.quoteLineId,editingInvoiceId)):'-'}</td>
+ <td>${l.quoteLineId?money(getInvoiceLineAllowance(l)):'-'}</td>
+ <td><input type="number" min="0.01" ${l.quoteLineId?`max="${getInvoiceLineAllowance(l)}"`:''} step="0.01" value="${safeNumber(l.qty)}" onchange="updateInvoiceQty(${i},this.value)"></td>
+ <td><input type="number" min="0" step="0.01" value="${safeNumber(l.price)}" onchange="updateInvoicePrice(${i},this.value)"></td>
+ <td><button class="btn danger" onclick="deleteInvoiceLine(${i})">刪除</button></td>
+ </tr>`).join('')+'</table></div>';
+}
+function getInvoiceLineAllowance(line){
+ if(!line.quoteId||!line.quoteLineId)return Infinity;
+ const quote=data.quotes.find(q=>q.id===line.quoteId);const quoteLine=quote?.lines?.find(l=>l.id===line.quoteLineId);
+ return quote&&quoteLine?getRemainingQty(quote,quoteLine,editingInvoiceId):0;
+}
+function updateInvoiceQty(i,v){
+ const qty=safeNumber(v,-1);if(qty<=0)return alert('數量必須大於 0');const allowed=getInvoiceLineAllowance(invoiceLines[i]);if(qty>allowed+0.000001){alert(`本次數量不能超過 ${money(allowed)}`);renderInvoiceEditor();return}
+ invoiceLines[i].qty=qty;
+ invoiceLines[i].amount=invoiceLines[i].qty*invoiceLines[i].price;
+ renderInvoice();renderInvoiceEditor();
+}
+function updateInvoicePrice(i,v){
+ const price=safeNumber(v,-1);if(price<0)return alert('單價不能小於 0');invoiceLines[i].price=price;
+ invoiceLines[i].amount=invoiceLines[i].qty*invoiceLines[i].price;
+ renderInvoice();renderInvoiceEditor();
+}
+function deleteInvoiceLine(i){
+ invoiceLines.splice(i,1);
+ renderInvoice();renderInvoiceEditor();
+}
+
+function refreshAll(){refreshSelects();refreshTables();renderQuote();renderQuoteEditor();renderInvoice();renderInvoiceEditor();refreshExtraPanelsSafe()}
 refreshAll();
 </script>
 </body>
